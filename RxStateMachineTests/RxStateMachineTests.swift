@@ -1,36 +1,62 @@
-//
-//  RxStateMachineTests.swift
-//  RxStateMachineTests
-//
-//  Created by Jordan Hamill on 22/10/2016.
-//  Copyright © 2016 Jordan Hamill. All rights reserved.
-//
-
+import RxStateMachine
+import RxSwift
 import XCTest
-@testable import RxStateMachine
 
 class RxStateMachineTests: XCTestCase {
-    
-    override func setUp() {
-        super.setUp()
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
-    
-    override func tearDown() {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-        super.tearDown()
-    }
-    
     func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
-    
-    func testPerformanceExample() {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+
+        let itWorks = expectation(description: "It works")
+
+        enum MyInputs {
+            case connect
+            case connectOk
+            case disconnect
+            case disconnectOk
         }
+
+        enum MyStates {
+            case disconnected
+            case connecting
+            case connected
+            case disconnecting
+        }
+
+        func connect(send: @escaping (MyInputs) -> Void) {
+            DispatchQueue.global().async {
+                send(.connectOk)
+            }
+        }
+
+        func disconnect(send: (MyInputs) -> Void) {
+            send(.disconnectOk)
+        }
+
+        func noEffect(send: (MyInputs) -> Void) { }
+
+        func onDisconnected(send: (MyInputs) -> Void) {
+            itWorks.fulfill()
+        }
+
+        let machine = StateMachine<MyStates, MyInputs>(initialState: .disconnected,
+        mappings: [
+            /* Input      |      from              to         |   effect    */
+            .connect      | .disconnected  =>  .connecting    | connect,
+            .connectOk    | .connecting    =>  .connected     | noEffect,
+            .disconnect   | .connected     =>  .disconnecting | disconnect,
+            .disconnectOk | .disconnecting =>  .disconnected  | onDisconnected
+        ])
+
+        let disposeBag = DisposeBag()
+        machine.currentState.asObservable()
+            .filter { $0 == .connected }
+            .delay(2, scheduler: MainScheduler.instance)
+            .subscribe(onNext: { state in
+                machine.send(input: .disconnect)
+            })
+            .addDisposableTo(disposeBag)
+
+        machine.send(input: .connect)
+
+        waitForExpectations(timeout: 5, handler: nil)
     }
-    
 }
