@@ -1,6 +1,6 @@
 # RxStateMachine
 
-A simple state machine implementation with an API shamelessly based upon [RxAutomaton](github.com/inamiy/RxAutomaton).
+A simple state machine implementation with an API shamelessly based upon [RxAutomaton](https://github.com/inamiy/RxAutomaton).
 
 State transitions cause effects that can send a new input to the state machine, errors can be represented by new states and inputs.
 
